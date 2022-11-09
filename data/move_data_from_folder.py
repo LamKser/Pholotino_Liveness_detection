@@ -21,8 +21,10 @@ def main():
                 if os.path.exists(os.path.join(folder_datasets, root.split('/')[-1] + '_' + file)):
                     continue
                 shutil.move(os.path.join(root, root.split('/')[-1] + '_' + file), folder_datasets)
-                # shutil.rmtree(root)
-                os.system('rm -rf %s' % root)
+        # shutil.rmtree(root)
+    for item in os.listdir(folder_datasets):
+        if os.path.isdir(os.path.join(folder_datasets, item)):
+            os.system('rm -rf %s' % os.path.join(folder_datasets, item))
 
 
 if __name__ == '__main__':
