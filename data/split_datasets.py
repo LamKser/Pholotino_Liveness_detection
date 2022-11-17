@@ -9,7 +9,7 @@ classes_dir = ['datasets']  # total labels
 datasets_dir = '/datasets_bounding_box_original_card'
 
 val_ratio = 0.2
-test_ratio = 0.3
+test_ratio = 0
 
 # for cls in classes_dir:
 os.makedirs(os.path.join(root_dir, 'train'))
