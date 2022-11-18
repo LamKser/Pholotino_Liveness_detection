@@ -4,8 +4,11 @@ import torch
 from tqdm import tqdm 
 import time
 from data_loader import LoadData
+import os
+
 
 class VGG19(nn.Module):
+    
     def __init__(self, num_class, pretrained=False):
         super(VGG19, self).__init__()
         if pretrained:
@@ -19,9 +22,10 @@ class VGG19(nn.Module):
         return self.model(x)
 
 class RunModel():
+
     def __init__(self, device, train_path, val_path, test_path, batch_size, 
                         lr, weight_decay, momentum,
-                        step_size, gamma,
+                        is_scheduler, step_size, gamma,
                         num_class=2, pretrained=False):
         self.device = device
         self.model = VGG19(num_class, pretrained).to(self.device)
@@ -30,12 +34,23 @@ class RunModel():
                                     weight_decay=weight_decay, 
                                     momentum=momentum)
         self.critetion = nn.CrossEntropyLoss().to(self.device)
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer,
-                                                    step_size=step_size,
-                                                    gamma=gamma)
+        if is_scheduler:
+            self.scheduler = optim.lr_scheduler.StepLR(self.optimizer,
+                                                        step_size=step_size,
+                                                        gamma=gamma)
+        else:
+            self.scheduler = None
 
-        self.data = LoadData(train_path, val_path, test_path, batch_size)
-        print()
+        data = LoadData(train_path, val_path, test_path, batch_size)
+        self.train_data = data.train_loader()
+        self.val_data = data.val_loader()
+        self.test_data = data.test_loader()
+        print("Done load dataset")
+
+    def __save_model(self, save_path, weight_file):
+        torch.save({"state_dict":self.model.state_dict()},
+                    os.path.join(save_path, weight_file))
+                    
     def __train_one_epoch(self, epoch, epochs):
         with torch.set_grad_enabled(True):
             self.model.train()
@@ -43,8 +58,12 @@ class RunModel():
             total_acc = 0
             total = 0
 
-            start = time.time()
-            for step, (images, targets) in enumerate(self.data.train_loader()):
+            pbar = tqdm(enumerate(self.train_data),
+                        total=len(self.train_data),
+                        bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+            
+            pbar.set_description(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}][Train]')
+            for step, (images, targets) in pbar:
                 self.optimizer.zero_grad()
                 images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
@@ -53,27 +72,30 @@ class RunModel():
                 loss.backward()
 
                 _, predict = torch.max(outputs.data, 1)
-                total_acc = total_acc + (predict == targets).sum()                
+                step_acc = (predict == targets).sum().item()
+                total_acc = total_acc + step_acc              
                 total_loss = total_loss + loss.item()
-                total = total + 1
+                total = total + images.size(0)
                 self.optimizer.step()
 
                 if step % 250:
-                    print(f'\rEpoch [{epoch}/{epochs}][{self.scheduler.get_lr()[0]}]: Train loss - {(total_loss/total):.4f} Train acc - {(total_acc/total):.4f}', end='\r')
-
-            end = time.time()
+                    # print(f'\rEpoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]: Train loss - {(loss.item()/images.size(0)):.4f} Train acc - {(step_acc/images.size(0)):.4f}', end='\r')
+                    pbar.set_postfix(acc=f'{step_acc/images.size(0):.4f}', loss=f'{loss.item():.4f}')
+            
 
             ave_acc = total_acc / total
-            ave_loss = total_loss / total
-            print(f'\rEpoch [{epoch}/{epochs}][{self.scheduler.get_lr()[0]}]: Train loss - {ave_loss:.4f} Train acc - {ave_acc:.4f} ({(end-start):.4f}s)', end=' ')
+            ave_loss = total_loss / (step + 1)
+            pbar.set_postfix(acc=f'{ave_acc:.4f}', loss=f'{ave_loss:.4f}')
+            
     
-    def train(self, epochs):
+    def train(self, epochs, save_path, weight_file):
         for epoch in range(1, epochs+1):
             self.__train_one_epoch(epoch, epochs)
             self.val()
-            self.scheduler.step()
+            if not self.scheduler:
+                 self.scheduler.step()
+            self.__save_model(save_path, weight_file)
         
-
     def val(self):
         with torch.set_grad_enabled(False):
             self.model.eval()
@@ -82,7 +104,7 @@ class RunModel():
             total = 0
 
             start = time.time()
-            for step, (images, targets) in enumerate(self.data.val_loader()):
+            for step, (images, targets) in enumerate(self.val_data):
                 images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
@@ -97,5 +119,6 @@ class RunModel():
             ave_acc = total_acc / (step + 1)
             ave_loss = total_loss / (step + 1)
             print(f'Val loss - {(total_loss/total):.4f} Val acc - {(total_acc/total):.4f} ({(end-start):.4f}s)')
+    
     def test(self):
         pass

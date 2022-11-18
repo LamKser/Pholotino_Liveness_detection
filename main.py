@@ -10,16 +10,24 @@ parser.add_argument('--val-path', default='dataset/val', type=str, metavar='--VP
                   help='Validation data path (default: "dataset/val")')
 parser.add_argument('--test-path', default='dataset/test', type=str, metavar='--TEP',
                   help='Test data path (default: "dataset/test")')
+parser.add_argument('--save-path', default=None, type=str, metavar='--SP',
+                  help='Save weight path (default: None)') 
+parser.add_argument('--weight-file', default=None, type=str, metavar='--Weight',
+                  help='Weight file (default: None)')
+
+
 parser.add_argument('--num-class', default=2, type=int, metavar='--NC',
                    help='Number of class ')
 parser.add_argument('--batch-size', default=10, type=int, metavar='--BS',
                    help='Batch size (default: 10)')
 parser.add_argument('--lr', default=1e-5, type=float, metavar='--LR',
-                   help='Learning rate (default: 1e-5)')
+                   help='Learning rate (default: 1e-3)')
 parser.add_argument('--weight-decay', default=0.0, type=float, metavar='--WD',
                    help='weight decay (default: 0.0)')
 parser.add_argument('--momentum', default=0.0, type=float, metavar='--MO',
-                   help='momentum (default: 0.0)')                  
+                   help='momentum (default: 0.0)')    
+parser.add_argument('--is-scheduler', default=True, type=bool, metavar='--S',
+                   help='Is scheduler (default: False)')              
 parser.add_argument('--step-size', default=25, type=int, metavar='--SS',
                    help='Step size (default: 25)')
 parser.add_argument('--gamma', default=0.1, type=float, metavar='--GA',
@@ -37,7 +45,7 @@ if __name__ == "__main__":
     run = RunModel(device=device, 
                    train_path=args.train_path, val_path=args.val_path, test_path=args.test_path, batch_size=args.batch_size,
                    lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum,
-                   step_size=args.step_size, gamma=args.gamma,
+                   is_scheduler=args.is_scheduler, step_size=args.step_size, gamma=args.gamma,
                    num_class=args.num_class, pretrained=args.pretrained)
-    run.train(args.epochs)
+    run.train(args.epochs, save_path=args.save_path, weight_file=args.weight_file)
 
