@@ -5,7 +5,8 @@ from tqdm import tqdm
 import time
 from data_loader import LoadData
 import os
-
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 class VGG19(nn.Module):
     
@@ -80,14 +81,13 @@ class RunModel():
 
                 if step % 250:
                     # print(f'\rEpoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]: Train loss - {(loss.item()/images.size(0)):.4f} Train acc - {(step_acc/images.size(0)):.4f}', end='\r')
-                    pbar.set_postfix(acc=f'{step_acc/images.size(0):.4f}', loss=f'{loss.item():.4f}')
+                    pbar.set_postfix(acc=f'{total_acc/total:.4f}', loss=f'{total_loss/(step + 1):.4f}')
             
 
             ave_acc = total_acc / total
             ave_loss = total_loss / (step + 1)
             pbar.set_postfix(acc=f'{ave_acc:.4f}', loss=f'{ave_loss:.4f}')
             
-    
     def train(self, epochs, save_path, weight_file):
         for epoch in range(1, epochs+1):
             self.__train_one_epoch(epoch, epochs)
@@ -104,7 +104,10 @@ class RunModel():
             total = 0
 
             start = time.time()
-            for step, (images, targets) in enumerate(self.val_data):
+            pbar = tqdm(enumerate(self.val_data),
+                        total=len(self.val_data),
+                        bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+            for step, (images, targets) in pbar:
                 images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
