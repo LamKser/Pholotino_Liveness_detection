@@ -30,10 +30,11 @@ class VGG19(nn.Module):
 
 class RunModel():
 
-    def __init__(self, device, train_path, val_path, test_path, batch_size,
-                 lr, weight_decay, momentum,
-                 is_scheduler, step_size, gamma,
-                 num_class=2, pretrained=False):
+    def __init__(self, device, 
+                        train_path, val_path, test_path, test_video_path, batch_size,
+                        lr, weight_decay, momentum,
+                        is_scheduler, step_size, gamma,
+                        num_class=2, pretrained=False):
         self.device = device
         self.model = VGG19(num_class, pretrained).to(self.device)
         self.optimizer = optim.SGD(self.model.parameters(),
@@ -58,7 +59,7 @@ class RunModel():
 
 
     def __save_model(self, save_path, weight_file):
-        torch.save({"state_dict": self.model.state_dict()},
+        torch.save({'state_dict': self.model.state_dict()},
                    os.path.join(save_path, weight_file))
 
     def __train_one_epoch(self, epoch, epochs):
@@ -99,6 +100,8 @@ class RunModel():
             ave_loss = total_loss / (step + 1)
             pbar.set_postfix(acc=f'{ave_acc:.4f}', loss=f'{ave_loss:.4f}')
 
+        return ave_acc, ave_loss
+
     def __val(self, epoch, epochs):
         with torch.set_grad_enabled(False):
             self.model.eval()
@@ -131,16 +134,30 @@ class RunModel():
             ave_loss = total_loss / (step + 1)
             pbar.set_postfix(acc=f'{ave_acc:.4f}', loss=f'{ave_loss:.4f}')
 
+        return ave_acc, ave_loss
+
     def train(self, epochs, save_path, weight_file):
+        train_acc = []
+        train_loss = []
+        val_acc = []
+        val_loss = []
         for epoch in range(1, epochs+1):
-            self.__train_one_epoch(epoch, epochs)
-            self.__val(epoch, epochs)
+            __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs)
+            __val_acc, __val_loss = self.__val(epoch, epochs)
             if not self.scheduler:
                 self.scheduler.step()
+            train_acc.append(__train_acc)
+            train_loss.append(__train_loss)
+            val_acc.append(__val_acc)
+            val_loss.append(__val_loss)
             self.__save_model(save_path, weight_file)
 
-    def test(self, file_csv):
+        return train_acc, train_loss, val_acc, val_loss
+
+    def test(self, file_csv, weight_file):
         df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
+        checkpoint = torch.load(weight_file)
+        self.model.load_state_dict(checkpoint['state_dict'])
         paths = []
         scores = []
         truths = []
@@ -189,3 +206,6 @@ class RunModel():
 
         df.to_csv(file_csv, index=False)
         print(f'Saved results in {file_csv}')
+
+    def test_video(self):
+        pass
