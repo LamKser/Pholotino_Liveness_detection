@@ -52,7 +52,10 @@ class RunModel():
         self.train_data = data.train_loader()
         self.val_data = data.val_loader()
         self.test_data = data.test_loader()
-        print("Done load dataset")
+
+        print("Device use:", self.device)
+        print("Done load dataset:")
+
 
     def __save_model(self, save_path, weight_file):
         torch.save({"state_dict": self.model.state_dict()},

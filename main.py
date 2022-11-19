@@ -37,8 +37,9 @@ parser.add_argument('--pretrained', default=False, type=bool, metavar='--PRE',
 parser.add_argument('--epochs', default=100, type=int, metavar='--E',
                    help='Epochs (default: 100)')
 
-
-args = parser.parse_args()
+parser.add_argument()
+args = parser.parse_args('--mode', default='train', type=str, metavar='--M',
+                   help='Choose mode for running model (default: train)')
 
 if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -47,5 +48,8 @@ if __name__ == "__main__":
                    lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum,
                    is_scheduler=args.is_scheduler, step_size=args.step_size, gamma=args.gamma,
                    num_class=args.num_class, pretrained=args.pretrained)
-    # run.train(args.epochs, save_path=args.save_path, weight_file=args.weight_file)
-    run.test(args.csv_file)
+
+    if args.mode == 'train':
+        run.train(args.epochs, args.save_path, args.weight_file)
+    elif args.mode == 'test':
+        run.test(args.csv_file)
