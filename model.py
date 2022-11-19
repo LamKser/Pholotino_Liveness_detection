@@ -25,6 +25,8 @@ class VGG19(nn.Module):
         self.model.classifier[6] = nn.Linear(in_features, num_class)
 
     def forward(self, x):
+        x = self.model(x)
+        x = nn.Sigmoid(x)
         return self.model(x)
 
 
@@ -34,14 +36,15 @@ class RunModel():
                         train_path, val_path, test_path, test_video_path, batch_size,
                         lr, weight_decay, momentum,
                         is_scheduler, step_size, gamma,
-                        num_class=2, pretrained=False):
+                        num_class=1, pretrained=False):
         self.device = device
         self.model = VGG19(num_class, pretrained).to(self.device)
         self.optimizer = optim.SGD(self.model.parameters(),
                                    lr=lr,
                                    weight_decay=weight_decay,
                                    momentum=momentum)
-        self.critetion = nn.CrossEntropyLoss().to(self.device)
+        self.critetion = nn.BCEWithLogitsLoss().to(self.device)
+        # self.critetion = nn.CrossEntropyLoss().to(self.device)
         if is_scheduler:
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer,
                                                        step_size=step_size,
@@ -84,9 +87,10 @@ class RunModel():
                 loss = self.critetion(outputs, targets)
                 loss.backward()
 
-                _, predict = torch.max(outputs.data, 1)
-                step_acc = (predict == targets).sum().item()
-                total_acc = total_acc + step_acc
+                # _, predict = torch.max(outputs.data, 1)
+                predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
+                predict = torch.Tensor(predict)
+                total_acc = total_acc + (predict == targets).sum()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
                 self.optimizer.step()
@@ -121,7 +125,10 @@ class RunModel():
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
-                _, predict = torch.max(outputs.data, 1)
+
+                # _, predict = torch.max(outputs.data, 1)
+                predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
+                predict = torch.Tensor(predict)
                 total_acc = total_acc + (predict == targets).sum()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
@@ -170,7 +177,7 @@ class RunModel():
             pbar = tqdm(enumerate(self.test_data),
                         total=len(self.test_data),
                         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
-            # pbar.set_description(' ' * len(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]') + '[Valid]')
+            pbar.set_description('Testing model')
 
             for step, (path, images, targets) in pbar:
                 # print(path)
@@ -178,24 +185,23 @@ class RunModel():
                     self.device), targets.to(self.device)
                 outputs = self.model(images)
 
-                loss = self.critetion(outputs, targets)
-                _, predict = torch.max(outputs.data, 1)
+                # _, predict = torch.max(outputs.data, 1)
+                score = torch.sigmoid(outputs)
+                predict = 1 if score >= 0.5 else 0
+                predict = torch.Tensor(predict)
                 total_acc = total_acc + (predict == targets).sum()
-                total_loss = total_loss + loss.item()
                 total = total + images.size(0)
 
                 # Save to csv
-                score = torch.softmax(outputs, 1)
+                # score = torch.softmax(outputs, 1)
                 paths.append(path)
                 scores.append(score.data.cpu().numpy())
                 truths.append(targets.data.cpu().numpy())
                 if step % 200:
-                    pbar.set_postfix(
-                        acc=f'{total_acc/total:.4f}', loss=f'{total_loss/(step + 1):.4f}')
+                    pbar.set_postfix(acc=f'{total_acc/total:.4f}')
 
             ave_acc = total_acc / total
-            ave_loss = total_loss / (step + 1)
-            pbar.set_postfix(acc=f'{ave_acc:.4f}', loss=f'{ave_loss:.4f}')
+            pbar.set_postfix(acc=f'{ave_acc:.4f}')
 
         paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
         scores = np.array([subscore for s in scores for subscore in s])
