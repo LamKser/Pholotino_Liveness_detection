@@ -1,0 +1,1 @@
+python main.py --train-path D:\ZaloAI\Data_Process\Pholotino_Liveness_detection\final_train\train  --val-path D:\ZaloAI\Data_Process\Pholotino_Liveness_detection\final_train\val --test-path D:\ZaloAI\Data_Process\Pholotino_Liveness_detection\final_train\test --csv-file test.csv

@@ -2,8 +2,21 @@ from torchvision.datasets import ImageFolder
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
+
+class CustomImageFolder(ImageFolder):
+    def __init__(self, root: str, transform):
+        super(CustomImageFolder, self).__init__(root, transform)
+    
+    def __getitem__(self, index: int):
+        path, target = self.samples[index]
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+
+        return path, sample, target
+
 class LoadData:
-    def __init__(self, train_path, val_path, test_path, batch_size=10):
+    def __init__(self, train_path=None, val_path=None, test_path=None, batch_size=10):
         self.train_path = train_path
         self.val_path = val_path
         self.test_path = test_path
@@ -38,11 +51,10 @@ class LoadData:
                         transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                             std=[1., 1., 1.] )
                         ])
-        # val_data = DataLoader(image_folder, batch_size=self.batch_size
-        pass
+        image_folder = CustomImageFolder(self.test_path, transform)
+        # print(image_folder.imgs)
+        test_data = DataLoader(image_folder, batch_size=self.batch_size, shuffle=True)
+        
+        return test_data
 
-# if __name__ == "__main__":
-#     dataloader = train_data("D:\\ZaloAI\\Data Process\\Pholotino_Liveness_detection\\train")
-#     for step, (x, y) in enumerate(dataloader):
-#         # print(step, x.size(), y.size())
-#         print(y)
+

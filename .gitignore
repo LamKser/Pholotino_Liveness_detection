@@ -159,7 +159,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-Data_preprocess
-Match_DenseNet161
+command.txt
+test.csv
 test.py
-VGG_ResNet
