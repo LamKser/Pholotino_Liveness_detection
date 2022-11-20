@@ -212,14 +212,16 @@ class RunModel():
         video_path, video_files, transform = self.test_video_data
         checkpoint = torch.load(weight_file)
         self.model.load_state_dict(checkpoint['state_dict'])
-        for video in video_files:
-            cap = cv2.VideoCapture(os.path.join(video_path, video_files))
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    break
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                image_tensor = transform(frame)
-                image_tensor = image_tensor.unsqueeze(0).to(self.device)
-                output = self.model(image_tensor)
-            print(f"Done {video}")
+        with torch.set_grad_enabled(False):
+            self.model.eval()
+            for video in video_files:
+                cap = cv2.VideoCapture(os.path.join(video_path, video_files))
+                while True:
+                    ret, frame = cap.read()
+                    if not ret:
+                        break
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    image_tensor = transform(frame)
+                    image_tensor = image_tensor.unsqueeze(0).to(self.device)
+                    output = self.model(image_tensor)
+                print(f"Done {video}")
