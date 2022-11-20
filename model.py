@@ -6,7 +6,7 @@ from tqdm import tqdm
 import pandas as pd
 from data_loader import LoadData
 import os
-from PIL import ImageFile
+from PIL import ImageFile, Image
 import numpy as np
 import cv2
 
@@ -215,13 +215,16 @@ class RunModel():
         with torch.set_grad_enabled(False):
             self.model.eval()
             for video in video_files:
-                cap = cv2.VideoCapture(os.path.join(video_path, video_files))
+                cap = cv2.VideoCapture(os.path.join(video_path, video))
+                total_frame = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                score = 0
                 while True:
                     ret, frame = cap.read()
                     if not ret:
                         break
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    image_tensor = transform(frame)
+                    image_tensor = transform(Image.fromarray(frame))
                     image_tensor = image_tensor.unsqueeze(0).to(self.device)
                     output = self.model(image_tensor)
-                print(f"Done {video}")
+                    score = score + torch.sigmoid(output).item()
+                print(f"Done {video} {score/total_frame}")
