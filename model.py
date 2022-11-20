@@ -141,12 +141,13 @@ class RunModel():
 
         return ave_acc, ave_loss
 
-    def train(self, epochs, save_path, weight_file):
+    def train(self, epochs, save_path, weight_file, logger_path):
         # train_acc = []
         # train_loss = []
         # val_acc = []
         # val_loss = []
-        writer = SummaryWriter()
+        writer = SummaryWriter(logger_path)
+        
         for epoch in range(1, epochs+1):
             __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs)
             __val_acc, __val_loss = self.__val(epoch, epochs)
