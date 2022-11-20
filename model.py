@@ -8,6 +8,7 @@ from data_loader import LoadData
 import os
 from PIL import ImageFile
 import numpy as np
+import cv2
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -25,8 +26,6 @@ class VGG19(nn.Module):
         self.model.classifier[6] = nn.Linear(in_features, num_class)
 
     def forward(self, x):
-        x = self.model(x)
-        x = nn.Sigmoid(x)
         return self.model(x)
 
 
@@ -52,11 +51,11 @@ class RunModel():
         else:
             self.scheduler = None
 
-        data = LoadData(train_path, val_path, test_path, batch_size)
+        data = LoadData(train_path, val_path, test_path, test_video_path, batch_size)
         self.train_data = data.train_loader()
         self.val_data = data.val_loader()
         self.test_data = data.test_loader()
-
+        self.test_video_data = data.test_video_loader()
         print("Device use:", self.device)
         print("Done load dataset:")
 
@@ -80,16 +79,16 @@ class RunModel():
                 f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}][Train]')
             for step, (images, targets) in pbar:
                 self.optimizer.zero_grad()
-                images, targets = images.to(
-                    self.device), targets.to(self.device)
+                targets = targets.unsqueeze(1).float()
+                images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
                 loss.backward()
 
                 # _, predict = torch.max(outputs.data, 1)
-                predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
-                predict = torch.Tensor(predict)
+                # predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
+                predict = torch.sigmoid(outputs).round()
                 total_acc = total_acc + (predict == targets).sum()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
@@ -120,15 +119,14 @@ class RunModel():
                 ' ' * len(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]') + '[Valid]')
 
             for step, (images, targets) in pbar:
-                images, targets = images.to(
-                    self.device), targets.to(self.device)
+                targets = targets.unsqueeze(1).float()
+                images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
 
                 # _, predict = torch.max(outputs.data, 1)
-                predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
-                predict = torch.Tensor(predict)
+                predict = torch.sigmoid(outputs).round()
                 total_acc = total_acc + (predict == targets).sum()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
@@ -170,7 +168,6 @@ class RunModel():
         truths = []
         with torch.set_grad_enabled(False):
             self.model.eval()
-            total_loss = 0
             total_acc = 0
             total = 0
 
@@ -181,21 +178,19 @@ class RunModel():
 
             for step, (path, images, targets) in pbar:
                 # print(path)
-                images, targets = images.to(
-                    self.device), targets.to(self.device)
+                targets = targets.unsqueeze(1).float()
+                images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 # _, predict = torch.max(outputs.data, 1)
-                score = torch.sigmoid(outputs)
-                predict = 1 if score >= 0.5 else 0
-                predict = torch.Tensor(predict)
-                total_acc = total_acc + (predict == targets).sum()
+                predict = torch.sigmoid(outputs)
+                total_acc = total_acc + (predict.round() == targets).sum()
                 total = total + images.size(0)
 
                 # Save to csv
                 # score = torch.softmax(outputs, 1)
                 paths.append(path)
-                scores.append(score.data.cpu().numpy())
+                scores.append(predict.data.cpu().numpy())
                 truths.append(targets.data.cpu().numpy())
                 if step % 200:
                     pbar.set_postfix(acc=f'{total_acc/total:.4f}')
@@ -214,4 +209,15 @@ class RunModel():
         print(f'Saved results in {file_csv}')
 
     def test_video(self):
-        pass
+        video_path, video_files, transform = self.test_video_data
+        for video in video_files:
+            cap = cv2.VideoCapture(os.path.join(video_path, video_files))
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                image_tensor = transform(frame)
+                image_tensor = image_tensor.unsqueeze(0).to(self.device)
+                output = self.model(image_tensor)
+            print(f"Done {video}")
