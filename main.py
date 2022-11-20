@@ -12,6 +12,8 @@ parser.add_argument('--val-path', default=None, type=str, metavar='--VP',
                   help='Validation data path (default: None)')
 parser.add_argument('--test-path', default=None, type=str, metavar='--TEP',
                   help='Test data path (default: None)')
+parser.add_argument('--test-video-path', default=None, type=str, metavar='--TVP',
+                  help='Test video data path (default: None)')
 parser.add_argument('--save-path', default=None, type=str, metavar='--SP',
                   help='Save weight path (default: None)') 
 parser.add_argument('--weight-file', default=None, type=str, metavar='--Weight',
@@ -46,7 +48,7 @@ args = parser.parse_args()
 if __name__ == "__main__":
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     run = RunModel(device=device, 
-                   train_path=args.train_path, val_path=args.val_path, test_path=args.test_path, batch_size=args.batch_size,
+                   train_path=args.train_path, val_path=args.val_path, test_path=args.test_path, test_video_path=args.test_video_path, batch_size=args.batch_size,
                    lr=args.lr, weight_decay=args.weight_decay, momentum=args.momentum,
                    is_scheduler=args.is_scheduler, step_size=args.step_size, gamma=args.gamma,
                    num_class=args.num_class, pretrained=args.pretrained)
@@ -57,4 +59,4 @@ if __name__ == "__main__":
     elif args.mode == 'test':
         run.test(args.csv_file, os.path.join(args.save_path, args.weight_file))
     elif args.mode == 'test_video':
-        pass
+        run.test_video(args.csv_file, os.path.join(args.save_path, args.weight_file))

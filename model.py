@@ -208,8 +208,10 @@ class RunModel():
         df.to_csv(file_csv, index=False)
         print(f'Saved results in {file_csv}')
 
-    def test_video(self):
+    def test_video(self, file_csv, weight_file):
         video_path, video_files, transform = self.test_video_data
+        checkpoint = torch.load(weight_file)
+        self.model.load_state_dict(checkpoint['state_dict'])
         for video in video_files:
             cap = cv2.VideoCapture(os.path.join(video_path, video_files))
             while True:
