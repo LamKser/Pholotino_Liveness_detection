@@ -9,9 +9,9 @@ import os
 from PIL import ImageFile, Image
 import numpy as np
 import cv2
+from torch.utils.tensorboard import SummaryWriter
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-
 
 class VGG19(nn.Module):
 
@@ -142,22 +142,29 @@ class RunModel():
         return ave_acc, ave_loss
 
     def train(self, epochs, save_path, weight_file):
-        train_acc = []
-        train_loss = []
-        val_acc = []
-        val_loss = []
+        # train_acc = []
+        # train_loss = []
+        # val_acc = []
+        # val_loss = []
+        writer = SummaryWriter()
         for epoch in range(1, epochs+1):
             __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs)
             __val_acc, __val_loss = self.__val(epoch, epochs)
             if not self.scheduler:
                 self.scheduler.step()
-            train_acc.append(__train_acc)
-            train_loss.append(__train_loss)
-            val_acc.append(__val_acc)
-            val_loss.append(__val_loss)
+            # train_acc.append(__train_acc)
+            # train_loss.append(__train_loss)
+            # val_acc.append(__val_acc)
+            # val_loss.append(__val_loss)
+            writer.add_scalars('Loss', {'train':__train_loss,
+                                        'val':__val_loss},
+                                        epoch)
+            writer.add_scalars('Accuracy', {'train':__train_acc,
+                                        'val':__val_acc},
+                                        epoch)
             self.__save_model(save_path, weight_file)
-
-        return train_acc, train_loss, val_acc, val_loss
+        writer.close()
+        # return train_acc, train_loss, val_acc, val_loss
 
     def test(self, file_csv, weight_file):
         df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
@@ -210,6 +217,9 @@ class RunModel():
 
     def test_video(self, file_csv, weight_file):
         video_path, video_files, transform = self.test_video_data
+        df = pd.DataFrame(columns=['fname', 'liveness_score'])
+        fname = []
+        liveness_score = []
         checkpoint = torch.load(weight_file)
         self.model.load_state_dict(checkpoint['state_dict'])
         with torch.set_grad_enabled(False):
@@ -227,4 +237,11 @@ class RunModel():
                     image_tensor = image_tensor.unsqueeze(0).to(self.device)
                     output = self.model(image_tensor)
                     score = score + torch.sigmoid(output).item()
+                fname.append(video)
+                liveness_score.append(score/total_frame)
                 print(f"Done {video} {score/total_frame}")
+        
+        df['fname'] = fname
+        df['liveness_score'] = liveness_score
+
+        df.to_csv(file_csv, index=False)

@@ -60,7 +60,7 @@ class LoadData:
         return test_data
     
     def test_video_loader(self):
-        video_files = os.listdir(self.test_video_path)
+        video_files = sorted(os.listdir(self.test_video_path))
         transform = transforms.Compose([
                         transforms.Resize([224, 224]),
                         transforms.ToTensor(),

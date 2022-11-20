@@ -20,6 +20,8 @@ parser.add_argument('--weight-file', default=None, type=str, metavar='--Weight',
                   help='Weight file (default: None)')
 parser.add_argument('--csv-file', default=None, type=str, metavar='--CSV',
                    help='Save score to csv (default: None)')
+parser.add_argument('--csv-predict', default=None, type=str, metavar='--CSV',
+                   help='Save predict score to csv (default: None)')
 parser.add_argument('--num-class', default=1, type=int, metavar='--NC',
                    help='Number of class (default: 2) ')
 parser.add_argument('--batch-size', default=10, type=int, metavar='--BS',
@@ -40,7 +42,6 @@ parser.add_argument('--pretrained', default=False, type=bool, metavar='--PRE',
                    help='Pretrained (ImageNet) (default: False)')
 parser.add_argument('--epochs', default=100, type=int, metavar='--E',
                    help='Epochs (default: 100)')
-
 parser.add_argument('--mode', default='train', type=str, metavar='--M',
                    help='Choose mode for running model (default: train)')
 
@@ -59,4 +60,4 @@ if __name__ == "__main__":
     elif args.mode == 'test':
         run.test(args.csv_file, os.path.join(args.save_path, args.weight_file))
     elif args.mode == 'test_video':
-        run.test_video(args.csv_file, os.path.join(args.save_path, args.weight_file))
+        run.test_video(args.csv_predict, os.path.join(args.save_path, args.weight_file))
