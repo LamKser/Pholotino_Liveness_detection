@@ -16,7 +16,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 class Model(nn.Module):
 
     def __init__(self, name, num_class, pretrained=False):
-        super(VGG19, self).__init__()
+        super(Model, self).__init__()
         if name == 'vgg19':
             if pretrained:
                 self.model = models.vgg19(
@@ -29,8 +29,25 @@ class Model(nn.Module):
                     weights=models.AlexNet_Weights.IMAGENET1K_V1)
             else:
                 self.model = models.alexnet()
-        in_features = self.model.classifier[6].in_features
-        self.model.classifier[6] = nn.Linear(in_features, num_class)
+        elif name == 'vgg19bn':
+            if pretrained:
+                self.model = models.vgg19_bn(
+                    weights=models.VGG19_BN_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.vgg19_bn()
+        elif name == 'resnet50':
+            if pretrained:
+                self.model = models.resnet50(
+                    weights=models.ResNet50_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.resnet50()
+        
+        if 'resnet' in name:
+            in_features = self.model.fc.in_features
+            self.model.fc = nn.Linear(in_features, num_class)
+        else:
+            in_features = self.model.classifier[6].in_features
+            self.model.classifier[6] = nn.Linear(in_features, num_class)
 
     def forward(self, x):
         return self.model(x)
@@ -48,8 +65,8 @@ class RunModel():
                                    lr=lr,
                                    weight_decay=weight_decay,
                                    momentum=momentum)
-        self.critetion = nn.BCEWithLogitsLoss().to(self.device)
-        # self.critetion = nn.CrossEntropyLoss().to(self.device)
+        # self.critetion = nn.BCEWithLogitsLoss().to(self.device)
+        self.critetion = nn.CrossEntropyLoss().to(self.device)
         if is_scheduler:
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer,
                                                        step_size=step_size,
@@ -85,16 +102,16 @@ class RunModel():
                 f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}][Train]')
             for step, (images, targets) in pbar:
                 self.optimizer.zero_grad()
-                targets = targets.unsqueeze(1).float()
+                # targets = targets.unsqueeze(1).float()
                 images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
                 loss.backward()
 
-                # _, predict = torch.max(outputs.data, 1)
+                _, predict = torch.max(outputs.data, 1)
                 # predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
-                predict = torch.sigmoid(outputs).round()
+                # predict = torch.sigmoid(outputs).round()
                 total_acc = total_acc + (predict == targets).sum()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
@@ -125,14 +142,14 @@ class RunModel():
                 ' ' * len(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]') + '[Valid]')
 
             for step, (images, targets) in pbar:
-                targets = targets.unsqueeze(1).float()
+                # targets = targets.unsqueeze(1).float()
                 images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
 
-                # _, predict = torch.max(outputs.data, 1)
-                predict = torch.sigmoid(outputs).round()
+                _, predict = torch.max(outputs.data, 1)
+                # predict = torch.sigmoid(outputs).round()
                 total_acc = total_acc + (predict == targets).sum()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
@@ -241,10 +258,15 @@ class RunModel():
                         break
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     image_tensor = transform(Image.fromarray(frame))
-                    image_tensor = image_tensor.unsqueeze(0).to(self.device)
-                    output = self.model(image_tensor)
-                    score = score + torch.sigmoid(output).item()
-                fname.append(video)
+                    # image_tensor = image_tensor.unsqueeze(0).to(self.device)
+                    image_tensor = image_tensor.to(self.device)
+                    outputs = self.model(image_tensor)
+                    # score = score + torch.sigmoid(output).item()
+                    # score = score + torch.sigmoid(output).item()
+                    predicted = F.softmax(outputs, 1)
+                    score = score + round(predicted[0][1].item(), 2)
+                    print(score)
+                fname.append(predicted)
                 liveness_score.append(score/total_frame)
                 print(f"Done {video} {score/total_frame}")
         
