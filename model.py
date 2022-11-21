@@ -13,31 +13,37 @@ from torch.utils.tensorboard import SummaryWriter
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-class VGG19(nn.Module):
+class Model(nn.Module):
 
-    def __init__(self, num_class, pretrained=False):
+    def __init__(self, name, num_class, pretrained=False):
         super(VGG19, self).__init__()
-        if pretrained:
-            self.model = models.vgg19(
-                weights=models.VGG19_Weights.IMAGENET1K_V1)
-        else:
-            self.model = models.vgg19()
+        if name == 'vgg19':
+            if pretrained:
+                self.model = models.vgg19(
+                    weights=models.VGG19_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.vgg19()
+        elif name == 'alexnet':
+            if pretrained:
+                self.model = models.alexnet(
+                    weights=models.AlexNet_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.alexnet()
         in_features = self.model.classifier[6].in_features
         self.model.classifier[6] = nn.Linear(in_features, num_class)
 
     def forward(self, x):
         return self.model(x)
 
-
 class RunModel():
 
-    def __init__(self, device, 
+    def __init__(self, device, name,
                         train_path, val_path, test_path, test_video_path, batch_size,
                         lr, weight_decay, momentum,
                         is_scheduler, step_size, gamma,
                         num_class=1, pretrained=False):
         self.device = device
-        self.model = VGG19(num_class, pretrained).to(self.device)
+        self.model = Model(name, num_class, pretrained).to(self.device)
         self.optimizer = optim.SGD(self.model.parameters(),
                                    lr=lr,
                                    weight_decay=weight_decay,
@@ -151,7 +157,7 @@ class RunModel():
         for epoch in range(1, epochs+1):
             __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs)
             __val_acc, __val_loss = self.__val(epoch, epochs)
-            if not self.scheduler:
+            if not (self.scheduler is None):
                 self.scheduler.step()
             # train_acc.append(__train_acc)
             # train_loss.append(__train_loss)

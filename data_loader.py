@@ -28,8 +28,8 @@ class LoadData:
         transform = transforms.Compose([
                         transforms.Resize([224, 224]),
                         transforms.ToTensor(),
-                        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                            std=[1., 1., 1.] )
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                            std=[0.229, 0.224, 0.225] )
                         ])
         image_folder = ImageFolder(self.train_path, transform)
         train_data = DataLoader(image_folder, batch_size=self.batch_size, shuffle=True)
@@ -39,8 +39,8 @@ class LoadData:
         transform = transforms.Compose([
                         transforms.Resize([224, 224]),
                         transforms.ToTensor(),
-                        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                            std=[1., 1., 1.] )
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                            std=[0.229, 0.224, 0.225] )
                         ])
         image_folder = ImageFolder(self.val_path, transform)
         val_data = DataLoader(image_folder, batch_size=self.batch_size, shuffle=True)
@@ -50,8 +50,8 @@ class LoadData:
         transform = transforms.Compose([
                         transforms.Resize([224, 224]),
                         transforms.ToTensor(),
-                        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                            std=[1., 1., 1.] )
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                            std=[0.229, 0.224, 0.225] )
                         ])
         image_folder = CustomImageFolder(self.test_path, transform)
         # print(image_folder.imgs)
@@ -64,8 +64,8 @@ class LoadData:
         transform = transforms.Compose([
                         transforms.Resize([224, 224]),
                         transforms.ToTensor(),
-                        transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                            std=[1., 1., 1.] )
+                        transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                            std=[0.229, 0.224, 0.225] )
                         ])
         return self.test_video_path, video_files, transform
 
