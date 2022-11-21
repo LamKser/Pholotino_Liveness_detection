@@ -112,7 +112,7 @@ class RunModel():
                 _, predict = torch.max(outputs.data, 1)
                 # predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
                 # predict = torch.sigmoid(outputs).round()
-                total_acc = total_acc + (predict == targets).sum()
+                total_acc = total_acc + (predict == targets).sum().item()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
                 self.optimizer.step()
@@ -150,7 +150,7 @@ class RunModel():
 
                 _, predict = torch.max(outputs.data, 1)
                 # predict = torch.sigmoid(outputs).round()
-                total_acc = total_acc + (predict == targets).sum()
+                total_acc = total_acc + (predict == targets).sum().item()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
 
@@ -209,13 +209,13 @@ class RunModel():
 
             for step, (path, images, targets) in pbar:
                 # print(path)
-                targets = targets.unsqueeze(1).float()
+                # targets = targets.unsqueeze(1).float()
                 images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
-                # _, predict = torch.max(outputs.data, 1)
-                predict = torch.sigmoid(outputs)
-                total_acc = total_acc + (predict.round() == targets).sum()
+                _, predict = torch.max(outputs.data, 1)
+                # predict = torch.sigmoid(outputs)
+                total_acc = total_acc + (predict == targets).sum().item()
                 total = total + images.size(0)
 
                 # Save to csv
@@ -248,7 +248,7 @@ class RunModel():
         self.model.load_state_dict(checkpoint['state_dict'])
         with torch.set_grad_enabled(False):
             self.model.eval()
-            for video in video_files:
+            for video in tqdm(video_files, total=len(video_files)):
                 cap = cv2.VideoCapture(os.path.join(video_path, video))
                 total_frame = cap.get(cv2.CAP_PROP_FRAME_COUNT)
                 score = 0
@@ -258,21 +258,22 @@ class RunModel():
                         break
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     image_tensor = transform(Image.fromarray(frame))
-                    # image_tensor = image_tensor.unsqueeze(0).to(self.device)
+                    # print(image_tensor.size())
+                    # image_tensor = image_tensor.to(self.device)
+                    image_tensor = image_tensor.unsqueeze(0).to(self.device)
                     image_tensor = image_tensor.to(self.device)
                     outputs = self.model(image_tensor)
                     # score = score + torch.sigmoid(output).item()
                     # score = score + torch.sigmoid(output).item()
                     predicted = F.softmax(outputs, 1)
-                    score = score + round(predicted[0][1].item(), 2)
-                    print(predicted)
-                    print(predicted[0][1].item())
-                    print(score)
-                fname.append(predicted)
+                    # score = score + round(predicted[0][1].item(), 2)
+                    score = score + predicted[0][1].item()
+                fname.append(video)
                 liveness_score.append(score/total_frame)
-                print(f"Done {video} {score/total_frame}")
+                # print(f"Done {video} {score/total_frame}")
         
         df['fname'] = fname
         df['liveness_score'] = liveness_score
 
         df.to_csv(file_csv, index=False)
+        print(f"Saved at {file_csv}")

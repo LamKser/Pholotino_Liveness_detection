@@ -19,9 +19,9 @@ parser.add_argument('--save-path', default=None, type=str, metavar='--SP',
                     help='Save weight path (default: None)')
 parser.add_argument('--weight-file', default=None, type=str, metavar='--Weight',
                     help='Weight file (default: None)')
-parser.add_argument('--csv-file', default=None, type=str, metavar='--CSV',
+parser.add_argument('--csv-file', default='Result.csv', type=str, metavar='--CSV',
                     help='Save score to csv (default: None)')
-parser.add_argument('--csv-predict', default=None, type=str, metavar='--CSV',
+parser.add_argument('--csv-predict', default='Predict.csv', type=str, metavar='--CSV',
                     help='Save predict score to csv (default: None)')
 parser.add_argument('--num-class', default=1, type=int, metavar='--NC',
                     help='Number of class (default: 2) ')
