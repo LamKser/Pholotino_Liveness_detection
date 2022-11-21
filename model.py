@@ -265,6 +265,8 @@ class RunModel():
                     # score = score + torch.sigmoid(output).item()
                     predicted = F.softmax(outputs, 1)
                     score = score + round(predicted[0][1].item(), 2)
+                    print(predicted)
+                    print(predicted[0][1].item())
                     print(score)
                 fname.append(predicted)
                 liveness_score.append(score/total_frame)
