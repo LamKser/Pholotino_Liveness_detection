@@ -23,7 +23,7 @@ parser.add_argument('--csv-file', default='Result.csv', type=str, metavar='--CSV
                     help='Save score to csv (default: None)')
 parser.add_argument('--csv-predict', default='Predict.csv', type=str, metavar='--CSV',
                     help='Save predict score to csv (default: None)')
-parser.add_argument('--num-class', default=1, type=int, metavar='--NC',
+parser.add_argument('--num-class', default=2, type=int, metavar='--NC',
                     help='Number of class (default: 2) ')
 parser.add_argument('--batch-size', default=10, type=int, metavar='--BS',
                     help='Batch size (default: 10)')
