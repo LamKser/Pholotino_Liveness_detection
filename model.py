@@ -13,59 +13,60 @@ from torch.utils.tensorboard import SummaryWriter
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+
 class Model(nn.Module):
 
     def __init__(self, name, num_class, pretrained=False):
         super(Model, self).__init__()
+
         if name == 'vgg19':
             if pretrained:
                 self.model = models.vgg19(
                     weights=models.VGG19_Weights.IMAGENET1K_V1)
             else:
                 self.model = models.vgg19()
-        elif name == 'alexnet':
+
+        elif name == 'vgg16':
             if pretrained:
-                self.model = models.alexnet(
-                    weights=models.AlexNet_Weights.IMAGENET1K_V1)
+                self.model = models.vgg16(
+                    weights=models.VGG16_Weights.IMAGENET1K_V1)
             else:
-                self.model = models.alexnet()
+                self.model = models.vgg16()
+
         elif name == 'vgg19bn':
             if pretrained:
                 self.model = models.vgg19_bn(
                     weights=models.VGG19_BN_Weights.IMAGENET1K_V1)
             else:
                 self.model = models.vgg19_bn()
-        elif name == 'resnet50':
+
+        elif name == 'vgg16bn':
             if pretrained:
-                self.model = models.resnet50(
-                    weights=models.ResNet50_Weights.IMAGENET1K_V1)
+                self.model = models.vgg16_bn(
+                    weights=models.VGG16_BN_Weights.IMAGENET1K_V1)
             else:
-                self.model = models.resnet50()
-        
-        if 'resnet' in name:
-            in_features = self.model.fc.in_features
-            self.model.fc = nn.Linear(in_features, num_class)
-        else:
-            in_features = self.model.classifier[6].in_features
-            self.model.classifier[6] = nn.Linear(in_features, num_class)
+                self.model = models.vgg16_bn()
+
+        in_features = self.model.classifier[6].in_features
+        self.model.classifier[6] = nn.Linear(in_features, num_class)
 
     def forward(self, x):
         return self.model(x)
 
+
 class RunModel():
 
     def __init__(self, device, name,
-                        train_path, val_path, test_path, test_video_path, batch_size,
-                        lr, weight_decay, momentum,
-                        is_scheduler, step_size, gamma,
-                        num_class=1, pretrained=False):
+                 train_path, val_path, test_path, test_video_path, batch_size,
+                 lr, weight_decay, momentum,
+                 is_scheduler, step_size, gamma,
+                 num_class=1, pretrained=False):
         self.device = device
         self.model = Model(name, num_class, pretrained).to(self.device)
         self.optimizer = optim.SGD(self.model.parameters(),
                                    lr=lr,
                                    weight_decay=weight_decay,
                                    momentum=momentum)
-        # self.critetion = nn.BCEWithLogitsLoss().to(self.device)
         self.critetion = nn.CrossEntropyLoss().to(self.device)
         if is_scheduler:
             self.scheduler = optim.lr_scheduler.StepLR(self.optimizer,
@@ -74,28 +75,25 @@ class RunModel():
         else:
             self.scheduler = None
 
-        data = LoadData(train_path, val_path, test_path, test_video_path, batch_size)
-        self.train_data = data.train_loader()
-        self.val_data = data.val_loader()
-        self.test_data = data.test_loader()
-        self.test_video_data = data.test_video_loader()
+        self.data = LoadData(train_path, val_path, test_path,
+                             test_video_path, batch_size)
+
         print("Device use:", self.device)
         print("Done load dataset:")
-
 
     def __save_model(self, save_path, weight_file):
         torch.save({'state_dict': self.model.state_dict()},
                    os.path.join(save_path, weight_file))
 
-    def __train_one_epoch(self, epoch, epochs):
+    def __train_one_epoch(self, epoch, epochs, train_data):
         with torch.set_grad_enabled(True):
             self.model.train()
             total_loss = 0
             total_acc = 0
             total = 0
 
-            pbar = tqdm(enumerate(self.train_data),
-                        total=len(self.train_data),
+            pbar = tqdm(enumerate(train_data),
+                        total=len(train_data),
                         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
 
             pbar.set_description(
@@ -103,7 +101,8 @@ class RunModel():
             for step, (images, targets) in pbar:
                 self.optimizer.zero_grad()
                 # targets = targets.unsqueeze(1).float()
-                images, targets = images.to(self.device), targets.to(self.device)
+                images, targets = images.to(
+                    self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
@@ -128,22 +127,23 @@ class RunModel():
 
         return ave_acc, ave_loss
 
-    def __val(self, epoch, epochs):
+    def __val(self, epoch, epochs, val_data):
         with torch.set_grad_enabled(False):
             self.model.eval()
             total_loss = 0
             total_acc = 0
             total = 0
 
-            pbar = tqdm(enumerate(self.val_data),
-                        total=len(self.val_data),
+            pbar = tqdm(enumerate(val_data),
+                        total=len(val_data),
                         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
             pbar.set_description(
                 ' ' * len(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]') + '[Valid]')
 
             for step, (images, targets) in pbar:
                 # targets = targets.unsqueeze(1).float()
-                images, targets = images.to(self.device), targets.to(self.device)
+                images, targets = images.to(
+                    self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
@@ -165,35 +165,34 @@ class RunModel():
         return ave_acc, ave_loss
 
     def train(self, epochs, save_path, weight_file, logger_path):
-        # train_acc = []
-        # train_loss = []
-        # val_acc = []
-        # val_loss = []
+        train_data = self.data.train_loader()
+        val_data = self.data.val_loader()
+
         writer = SummaryWriter(logger_path)
-        
+
         for epoch in range(1, epochs+1):
-            __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs)
-            __val_acc, __val_loss = self.__val(epoch, epochs)
+            __train_acc, __train_loss = self.__train_one_epoch(
+                epoch, epochs, train_data)
+            __val_acc, __val_loss = self.__val(epoch, epochs, val_data)
+
             if not (self.scheduler is None):
                 self.scheduler.step()
-            # train_acc.append(__train_acc)
-            # train_loss.append(__train_loss)
-            # val_acc.append(__val_acc)
-            # val_loss.append(__val_loss)
-            writer.add_scalars('Loss', {'train':__train_loss,
-                                        'val':__val_loss},
-                                        epoch)
-            writer.add_scalars('Accuracy', {'train':__train_acc,
-                                        'val':__val_acc},
-                                        epoch)
+
+            writer.add_scalars('Loss', {'train': __train_loss,
+                                        'val': __val_loss},
+                               epoch)
+            writer.add_scalars('Accuracy', {'train': __train_acc,
+                                            'val': __val_acc},
+                               epoch)
             self.__save_model(save_path, weight_file)
         writer.close()
-        # return train_acc, train_loss, val_acc, val_loss
 
     def test(self, file_csv, weight_file):
         df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
         checkpoint = torch.load(weight_file)
         self.model.load_state_dict(checkpoint['state_dict'])
+        test_data = self.data.test_loader()
+
         paths = []
         scores = []
         truths = []
@@ -202,24 +201,21 @@ class RunModel():
             total_acc = 0
             total = 0
 
-            pbar = tqdm(enumerate(self.test_data),
-                        total=len(self.test_data),
+            pbar = tqdm(enumerate(test_data),
+                        total=len(test_data),
                         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
             pbar.set_description('Testing model')
 
             for step, (path, images, targets) in pbar:
-                # print(path)
-                # targets = targets.unsqueeze(1).float()
-                images, targets = images.to(self.device), targets.to(self.device)
+                images, targets = images.to(
+                    self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 _, predict = torch.max(outputs.data, 1)
-                # predict = torch.sigmoid(outputs)
                 total_acc = total_acc + (predict == targets).sum().item()
                 total = total + images.size(0)
 
                 # Save to csv
-                # score = torch.softmax(outputs, 1)
                 paths.append(path)
                 scores.append(predict.data.cpu().numpy())
                 truths.append(targets.data.cpu().numpy())
@@ -229,7 +225,8 @@ class RunModel():
             ave_acc = total_acc / total
             pbar.set_postfix(acc=f'{ave_acc:.4f}')
 
-        paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
+        paths = np.array([subpath.split('\\')[-1]
+                         for p in paths for subpath in p])
         scores = np.array([subscore for s in scores for subscore in s])
         truths = np.array([subtruth for truth in truths for subtruth in truth])
         df['file_name'] = paths
@@ -240,12 +237,14 @@ class RunModel():
         print(f'Saved results in {file_csv}')
 
     def test_video(self, file_csv, weight_file):
-        video_path, video_files, transform = self.test_video_data
+        video_path, video_files, transform = self.data.test_video_loader()
+        checkpoint = torch.load(weight_file)
+        self.model.load_state_dict(checkpoint['state_dict'])
+
         df = pd.DataFrame(columns=['fname', 'liveness_score'])
         fname = []
         liveness_score = []
-        checkpoint = torch.load(weight_file)
-        self.model.load_state_dict(checkpoint['state_dict'])
+
         with torch.set_grad_enabled(False):
             self.model.eval()
             for video in tqdm(video_files, total=len(video_files)):
@@ -258,20 +257,13 @@ class RunModel():
                         break
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     image_tensor = transform(Image.fromarray(frame))
-                    # print(image_tensor.size())
-                    # image_tensor = image_tensor.to(self.device)
                     image_tensor = image_tensor.unsqueeze(0).to(self.device)
-                    image_tensor = image_tensor.to(self.device)
                     outputs = self.model(image_tensor)
-                    # score = score + torch.sigmoid(output).item()
-                    # score = score + torch.sigmoid(output).item()
                     predicted = F.softmax(outputs, 1)
-                    # score = score + round(predicted[0][1].item(), 2)
                     score = score + predicted[0][1].item()
                 fname.append(video)
                 liveness_score.append(score/total_frame)
-                # print(f"Done {video} {score/total_frame}")
-        
+
         df['fname'] = fname
         df['liveness_score'] = liveness_score
 

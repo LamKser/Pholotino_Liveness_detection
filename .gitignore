@@ -5,7 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+command.txt
 # Distribution / packaging
 .Python
 build/
@@ -159,6 +159,5 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
-command.txt
 test.csv
 test.py
