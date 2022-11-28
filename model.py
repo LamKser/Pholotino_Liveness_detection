@@ -164,26 +164,36 @@ class RunModel():
 
         return ave_acc, ave_loss
 
-    def train(self, epochs, save_path, weight_file, logger_path):
+    def train(self, epochs, save_path, weight_file, logger_path, val):
         train_data = self.data.train_loader()
-        val_data = self.data.val_loader()
+        if val:
+            val_data = self.data.val_loader()
 
         writer = SummaryWriter(logger_path)
 
         for epoch in range(1, epochs+1):
-            __train_acc, __train_loss = self.__train_one_epoch(
-                epoch, epochs, train_data)
-            __val_acc, __val_loss = self.__val(epoch, epochs, val_data)
+            # Train
+            __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs, train_data)
+            
+            # Validation
+            if val:
+                __val_acc, __val_loss = self.__val(epoch, epochs, val_data)
 
             if not (self.scheduler is None):
                 self.scheduler.step()
 
-            writer.add_scalars('Loss', {'train': __train_loss,
-                                        'val': __val_loss},
-                               epoch)
-            writer.add_scalars('Accuracy', {'train': __train_acc,
-                                            'val': __val_acc},
-                               epoch)
+            # Write to log file
+            if val:
+                writer.add_scalars('Loss', {'train': __train_loss,
+                                            'val': __val_loss},
+                                epoch)
+                writer.add_scalars('Accuracy', {'train': __train_acc,
+                                                'val': __val_acc},
+                                epoch)
+            else:
+                writer.add_scalars('Loss', {'train': __train_loss}, epoch)
+                writer.add_scalars('Accuracy', {'train': __train_acc}, epoch)
+
             self.__save_model(save_path, weight_file)
         writer.close()
 

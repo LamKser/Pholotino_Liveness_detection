@@ -1,11 +1,12 @@
 from argparse import ArgumentParser
 from model import RunModel
 import torch
-import matplotlib.pyplot as plt
 import os
 
 parser = ArgumentParser(description='Run VGG19')
 
+parser.add_argument('--validation', default=False, type=bool, metavar='--VAL',
+                    help='Validate model (default: "False")')
 parser.add_argument('--name', default='vgg19', type=str, metavar='--N',
                     help='Model name (default: "vgg19")')
 parser.add_argument('--train-path', default='train', type=str, metavar='--TRP',
@@ -60,7 +61,7 @@ if __name__ == "__main__":
                    num_class=args.num_class, pretrained=args.pretrained)
 
     if args.mode == 'train':
-        train_acc, train_loss, val_acc, val_loss = run.train(args.epochs, args.save_path, args.weight_file, args.logger_path)
+        train_acc, train_loss, val_acc, val_loss = run.train(args.epochs, args.save_path, args.weight_file, args.logger_path, args.validation)
 
     elif args.mode == 'test':
         run.test(args.csv_file, os.path.join(args.save_path, args.weight_file))
