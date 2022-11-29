@@ -26,13 +26,6 @@ class Model(nn.Module):
             else:
                 self.model = models.vgg19()
 
-        elif name == 'vgg16':
-            if pretrained:
-                self.model = models.vgg16(
-                    weights=models.VGG16_Weights.IMAGENET1K_V1)
-            else:
-                self.model = models.vgg16()
-
         elif name == 'vgg19bn':
             if pretrained:
                 self.model = models.vgg19_bn(
@@ -40,15 +33,26 @@ class Model(nn.Module):
             else:
                 self.model = models.vgg19_bn()
 
-        elif name == 'vgg16bn':
+        elif name == 'resnet50':
             if pretrained:
-                self.model = models.vgg16_bn(
-                    weights=models.VGG16_BN_Weights.IMAGENET1K_V1)
+                self.model = models.resnet50(
+                    weights=models.ResNet50_Weights.IMAGENET1K_V2)
             else:
-                self.model = models.vgg16_bn()
+                self.model = models.resnet50()
 
-        in_features = self.model.classifier[6].in_features
-        self.model.classifier[6] = nn.Linear(in_features, num_class)
+        elif name == 'resnet101':
+            if pretrained:
+                self.model = models.resnet101(
+                    weights=models.ResNet101_Weights.IMAGENET1K_V2)
+            else:
+                self.model = models.resnet101()
+
+        if 'resnet' in name:
+            in_features = self.model.fc.in_features
+            self.model.fc = nn.Linear(in_features, num_class)
+        elif 'vgg' in name:
+            in_features = self.model.classifier[6].in_features
+            self.model.classifier[6] = nn.Linear(in_features, num_class)
 
     def forward(self, x):
         return self.model(x)
@@ -173,8 +177,9 @@ class RunModel():
 
         for epoch in range(1, epochs+1):
             # Train
-            __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs, train_data)
-            
+            __train_acc, __train_loss = self.__train_one_epoch(
+                epoch, epochs, train_data)
+
             # Validation
             if val:
                 __val_acc, __val_loss = self.__val(epoch, epochs, val_data)
@@ -186,10 +191,10 @@ class RunModel():
             if val:
                 writer.add_scalars('Loss', {'train': __train_loss,
                                             'val': __val_loss},
-                                epoch)
+                                   epoch)
                 writer.add_scalars('Accuracy', {'train': __train_acc,
                                                 'val': __val_acc},
-                                epoch)
+                                   epoch)
             else:
                 writer.add_scalars('Loss', {'train': __train_loss}, epoch)
                 writer.add_scalars('Accuracy', {'train': __train_acc}, epoch)
