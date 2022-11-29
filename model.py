@@ -19,27 +19,15 @@ class Model(nn.Module):
     def __init__(self, name, num_class, pretrained=False):
         super(Model, self).__init__()
 
-        if name == 'vgg19':
-            if pretrained:
-                self.model = models.vgg19(
-                    weights=models.VGG19_Weights.IMAGENET1K_V1)
-            else:
-                self.model = models.vgg19()
-
-        elif name == 'vgg19bn':
-            if pretrained:
-                self.model = models.vgg19_bn(
-                    weights=models.VGG19_BN_Weights.IMAGENET1K_V1)
-            else:
-                self.model = models.vgg19_bn()
-
-        elif name == 'resnet50':
+        # ResNet 50
+        if name == 'resnet50':
             if pretrained:
                 self.model = models.resnet50(
                     weights=models.ResNet50_Weights.IMAGENET1K_V2)
             else:
                 self.model = models.resnet50()
 
+        # ResNet 101
         elif name == 'resnet101':
             if pretrained:
                 self.model = models.resnet101(
@@ -47,12 +35,9 @@ class Model(nn.Module):
             else:
                 self.model = models.resnet101()
 
-        if 'resnet' in name:
-            in_features = self.model.fc.in_features
-            self.model.fc = nn.Linear(in_features, num_class)
-        elif 'vgg' in name:
-            in_features = self.model.classifier[6].in_features
-            self.model.classifier[6] = nn.Linear(in_features, num_class)
+        # Change the number of class
+        in_features = self.model.fc.in_features
+        self.model.fc = nn.Linear(in_features, num_class)
 
     def forward(self, x):
         return self.model(x)
@@ -83,9 +68,13 @@ class RunModel():
                              test_video_path, batch_size)
 
         print("Device use:", self.device)
-        print("Done load dataset:")
+        print("Done load dataset")
 
     def __save_model(self, save_path, weight_file):
+        # Create path if not exists
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
         torch.save({'state_dict': self.model.state_dict()},
                    os.path.join(save_path, weight_file))
 
@@ -99,12 +88,10 @@ class RunModel():
             pbar = tqdm(enumerate(train_data),
                         total=len(train_data),
                         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+            pbar.set_description(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}][Train]')
 
-            pbar.set_description(
-                f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}][Train]')
             for step, (images, targets) in pbar:
                 self.optimizer.zero_grad()
-                # targets = targets.unsqueeze(1).float()
                 images, targets = images.to(
                     self.device), targets.to(self.device)
                 outputs = self.model(images)
@@ -113,17 +100,13 @@ class RunModel():
                 loss.backward()
 
                 _, predict = torch.max(outputs.data, 1)
-                # predict = 1 if torch.sigmoid(outputs) >= 0.5 else 0
-                # predict = torch.sigmoid(outputs).round()
                 total_acc = total_acc + (predict == targets).sum().item()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
                 self.optimizer.step()
 
                 if step % 250:
-                    # print(f'\rEpoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]: Train loss - {(loss.item()/images.size(0)):.4f} Train acc - {(step_acc/images.size(0)):.4f}', end='\r')
-                    pbar.set_postfix(
-                        acc=f'{total_acc/total:.4f}', loss=f'{total_loss/(step + 1):.4f}')
+                    pbar.set_postfix(acc=f'{total_acc/total:.4f}', loss=f'{total_loss/(step + 1):.4f}')
 
             ave_acc = total_acc / total
             ave_loss = total_loss / (step + 1)
@@ -141,11 +124,9 @@ class RunModel():
             pbar = tqdm(enumerate(val_data),
                         total=len(val_data),
                         bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
-            pbar.set_description(
-                ' ' * len(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]') + '[Valid]')
+            pbar.set_description(' ' * len(f'Epoch [{epoch}/{epochs}][{self.scheduler.get_last_lr()[0]}]') + '[Valid]')
 
             for step, (images, targets) in pbar:
-                # targets = targets.unsqueeze(1).float()
                 images, targets = images.to(
                     self.device), targets.to(self.device)
                 outputs = self.model(images)
@@ -153,14 +134,12 @@ class RunModel():
                 loss = self.critetion(outputs, targets)
 
                 _, predict = torch.max(outputs.data, 1)
-                # predict = torch.sigmoid(outputs).round()
                 total_acc = total_acc + (predict == targets).sum().item()
                 total_loss = total_loss + loss.item()
                 total = total + images.size(0)
 
                 if step % 200:
-                    pbar.set_postfix(
-                        acc=f'{total_acc/total:.4f}', loss=f'{total_loss/(step + 1):.4f}')
+                    pbar.set_postfix(acc=f'{total_acc/total:.4f}', loss=f'{total_loss/(step + 1):.4f}')
 
             ave_acc = total_acc / total
             ave_loss = total_loss / (step + 1)
@@ -173,6 +152,7 @@ class RunModel():
         if val:
             val_data = self.data.val_loader()
 
+        # Write loss and accuracy to log file
         writer = SummaryWriter(logger_path)
 
         for epoch in range(1, epochs+1):
@@ -191,10 +171,10 @@ class RunModel():
             if val:
                 writer.add_scalars('Loss', {'train': __train_loss,
                                             'val': __val_loss},
-                                   epoch)
+                                            epoch)
                 writer.add_scalars('Accuracy', {'train': __train_acc,
                                                 'val': __val_acc},
-                                   epoch)
+                                                epoch)
             else:
                 writer.add_scalars('Loss', {'train': __train_loss}, epoch)
                 writer.add_scalars('Accuracy', {'train': __train_acc}, epoch)
@@ -204,9 +184,11 @@ class RunModel():
 
     def test(self, file_csv, weight_file):
         df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
+        test_data = self.data.test_loader()
+
+        # Load state_dict file
         checkpoint = torch.load(weight_file)
         self.model.load_state_dict(checkpoint['state_dict'])
-        test_data = self.data.test_loader()
 
         paths = []
         scores = []
@@ -222,8 +204,7 @@ class RunModel():
             pbar.set_description('Testing model')
 
             for step, (path, images, targets) in pbar:
-                images, targets = images.to(
-                    self.device), targets.to(self.device)
+                images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 _, predict = torch.max(outputs.data, 1)
@@ -240,8 +221,7 @@ class RunModel():
             ave_acc = total_acc / total
             pbar.set_postfix(acc=f'{ave_acc:.4f}')
 
-        paths = np.array([subpath.split('\\')[-1]
-                         for p in paths for subpath in p])
+        paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
         scores = np.array([subscore for s in scores for subscore in s])
         truths = np.array([subtruth for truth in truths for subtruth in truth])
         df['file_name'] = paths
@@ -253,6 +233,8 @@ class RunModel():
 
     def test_video(self, file_csv, weight_file):
         video_path, video_files, transform = self.data.test_video_loader()
+
+        # Load state_dict file
         checkpoint = torch.load(weight_file)
         self.model.load_state_dict(checkpoint['state_dict'])
 
