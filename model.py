@@ -92,8 +92,7 @@ class RunModel():
 
             for step, (images, targets) in pbar:
                 self.optimizer.zero_grad()
-                images, targets = images.to(
-                    self.device), targets.to(self.device)
+                images, targets = images.to(self.device), targets.to(self.device)
                 outputs = self.model(images)
 
                 loss = self.critetion(outputs, targets)
@@ -162,8 +161,7 @@ class RunModel():
 
         for epoch in range(1, epochs+1):
             # Train
-            __train_acc, __train_loss = self.__train_one_epoch(
-                epoch, epochs, train_data)
+            __train_acc, __train_loss = self.__train_one_epoch(epoch, epochs, train_data)
 
             # Validation
             if val:
@@ -187,54 +185,54 @@ class RunModel():
             self.__save_model(save_path, weight_file)
         writer.close()
 
-    def test(self, file_csv, weight_file):
-        df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
-        test_data = self.data.test_loader()
+    # def test(self, file_csv, weight_file):
+    #     df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
+    #     test_data = self.data.test_loader()
 
-        # Load state_dict file
-        checkpoint = torch.load(weight_file)
-        self.model.load_state_dict(checkpoint['state_dict'])
+    #     # Load state_dict file
+    #     checkpoint = torch.load(weight_file)
+    #     self.model.load_state_dict(checkpoint['state_dict'])
 
-        paths = []
-        scores = []
-        truths = []
-        with torch.set_grad_enabled(False):
-            self.model.eval()
-            total_acc = 0
-            total = 0
+    #     paths = []
+    #     scores = []
+    #     truths = []
+    #     with torch.set_grad_enabled(False):
+    #         self.model.eval()
+    #         total_acc = 0
+    #         total = 0
 
-            pbar = tqdm(enumerate(test_data),
-                        total=len(test_data),
-                        bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
-            pbar.set_description('Testing model')
+    #         pbar = tqdm(enumerate(test_data),
+    #                     total=len(test_data),
+    #                     bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+    #         pbar.set_description('Testing model')
 
-            for step, (path, images, targets) in pbar:
-                images, targets = images.to(self.device), targets.to(self.device)
-                outputs = self.model(images)
+    #         for step, (path, images, targets) in pbar:
+    #             images, targets = images.to(self.device), targets.to(self.device)
+    #             outputs = self.model(images)
 
-                _, predict = torch.max(outputs.data, 1)
-                total_acc = total_acc + (predict == targets).sum().item()
-                total = total + images.size(0)
+    #             _, predict = torch.max(outputs.data, 1)
+    #             total_acc = total_acc + (predict == targets).sum().item()
+    #             total = total + images.size(0)
 
-                # Save to csv
-                paths.append(path)
-                scores.append(predict.data.cpu().numpy())
-                truths.append(targets.data.cpu().numpy())
-                if step % 200:
-                    pbar.set_postfix(acc=f'{total_acc/total:.4f}')
+    #             # Save to csv
+    #             paths.append(path)
+    #             scores.append(predict.data.cpu().numpy())
+    #             truths.append(targets.data.cpu().numpy())
+    #             if step % 200:
+    #                 pbar.set_postfix(acc=f'{total_acc/total:.4f}')
 
-            ave_acc = total_acc / total
-            pbar.set_postfix(acc=f'{ave_acc:.4f}')
+    #         ave_acc = total_acc / total
+    #         pbar.set_postfix(acc=f'{ave_acc:.4f}')
 
-        paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
-        scores = np.array([subscore for s in scores for subscore in s])
-        truths = np.array([subtruth for truth in truths for subtruth in truth])
-        df['file_name'] = paths
-        df['liveness_score'] = scores
-        df['label'] = truths
+    #     paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
+    #     scores = np.array([subscore for s in scores for subscore in s])
+    #     truths = np.array([subtruth for truth in truths for subtruth in truth])
+    #     df['file_name'] = paths
+    #     df['liveness_score'] = scores
+    #     df['label'] = truths
 
-        df.to_csv(file_csv, index=False)
-        print(f'Saved results in {file_csv}')
+    #     df.to_csv(file_csv, index=False)
+    #     print(f'Saved results in {file_csv}')
 
     def test_video(self, file_csv, weight_file):
         video_path, video_files, transform = self.data.test_video_loader()

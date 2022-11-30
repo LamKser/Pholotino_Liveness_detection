@@ -13,8 +13,8 @@ parser.add_argument('--train-path', default='train', type=str,
                     help='Training data path (default: "train")')
 parser.add_argument('--val-path', default='val', type=str,
                     help='Validation data path (default: "val")')
-parser.add_argument('--test-path', default='test', type=str,
-                    help='Test data path (default: "test")')
+# parser.add_argument('--test-path', default='test', type=str,
+                    # help='Test data path (default: "test")')
 parser.add_argument('--test-video-path', default='videos', type=str,
                     help='Test video data path (default: "videos")')
 parser.add_argument('--save-path', default='weight', type=str,
