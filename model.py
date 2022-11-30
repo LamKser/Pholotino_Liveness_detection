@@ -147,13 +147,18 @@ class RunModel():
 
         return ave_acc, ave_loss
 
-    def train(self, epochs, save_path, weight_file, logger_path, val):
+    def train(self, epochs, save_path, weight_file, logger_path, val, continue_train=False):
         train_data = self.data.train_loader()
         if val:
             val_data = self.data.val_loader()
 
         # Write loss and accuracy to log file
         writer = SummaryWriter(logger_path)
+
+        # Load pretrained weight
+        if continue_train:
+            checkpoint = torch.load(os.path.join(save_path, weight_file))
+            self.model.load_state_dict(checkpoint['state_dict'])
 
         for epoch in range(1, epochs+1):
             # Train
