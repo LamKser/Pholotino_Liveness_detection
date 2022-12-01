@@ -29,7 +29,7 @@ Zalo provide 3 types of dataset:
 * **Data preparation**
 
     Run `cut_frame.py` for cutting frames from training video set
-    ```Python
+    ```sh
     python cut_frame.py --folder-video <Input folder video path> --label-csv <Input label csv> --fps <Input fps>
     ```
     * **Note:** 
@@ -53,7 +53,7 @@ Zalo provide 3 types of dataset:
 
 * **Training**
 
-    ```Python
+    ```sh
     python main.py --train-path <video folder> --save-path <path for saving weight> --weight-file <weight name> --mode train
     ```
 * **Test**
