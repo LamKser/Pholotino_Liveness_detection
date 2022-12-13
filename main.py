@@ -43,13 +43,13 @@ parser.add_argument('--gamma', default=0.1, type=float,
                     help='Gamma (default: 0.1)')
 parser.add_argument('--pretrained', default=False, type=bool,
                     help='Pretrained (ImageNet) (default: False)')
-parser.add_argument('--epochs', default=100, type=int,
-                    help='Epochs (default: 100)')
+parser.add_argument('--epochs', default=20, type=int,
+                    help='Epochs (default: 20)')
 parser.add_argument('--mode', default='train', type=str,
                     help='Choose mode for running model (default: train)')
 parser.add_argument('--logger-path', default='runs', type=str,
                     help='Logger path (default: runs')
-parser.add_argument('--continue-train', default=True, type=bool,
+parser.add_argument('--continue-train', default=False, type=bool,
                     help='Continue train model (default: False)')
 args = parser.parse_args()
 
