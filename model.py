@@ -19,21 +19,39 @@ class Model(nn.Module):
     def __init__(self, name, num_class, pretrained=False):
         super(Model, self).__init__()
 
+        # ResNet 18
+        if name == 'resnet18':
+            if pretrained:
+                self.model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.resnet18()
+
+        # ResNet 34
+        elif name == 'resnet34':
+            if pretrained:
+                self.model = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.resnet101()
+                
         # ResNet 50
         if name == 'resnet50':
             if pretrained:
-                self.model = models.resnet50(
-                    weights=models.ResNet50_Weights.IMAGENET1K_V2)
+                self.model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
             else:
                 self.model = models.resnet50()
 
         # ResNet 101
         elif name == 'resnet101':
             if pretrained:
-                self.model = models.resnet101(
-                    weights=models.ResNet101_Weights.IMAGENET1K_V2)
+                self.model = models.resnet101(weights=models.ResNet101_Weights.IMAGENET1K_V1)
             else:
                 self.model = models.resnet101()
+        # ResNet 152
+        if name == 'resnet152':
+            if pretrained:
+                self.model = models.resnet152(weights=models.ResNet152_Weights.IMAGENET1K_V1)
+            else:
+                self.model = models.resnet152()
 
         # Change the number of class
         in_features = self.model.fc.in_features
@@ -146,7 +164,7 @@ class RunModel():
 
         return ave_acc, ave_loss
 
-    def train(self, epochs, save_path, weight_file, logger_path, val, continue_train=False):
+    def train(self, epochs, save_path, weight_file, logger_path, val=True, continue_train=False):
         train_data = self.data.train_loader()
         if val:
             val_data = self.data.val_loader()
@@ -185,54 +203,54 @@ class RunModel():
             self.__save_model(save_path, weight_file)
         writer.close()
 
-    # def test(self, file_csv, weight_file):
-    #     df = pd.DataFrame(columns=['file_name', 'liveness_score', 'label'])
-    #     test_data = self.data.test_loader()
+    def test(self, file_csv, weight_file):
+        df = pd.DataFrame(columns=['fname', 'ground_truth', 'predict'])
+        test_data = self.data.test_loader()
 
-    #     # Load state_dict file
-    #     checkpoint = torch.load(weight_file)
-    #     self.model.load_state_dict(checkpoint['state_dict'])
+        # Load state_dict file
+        checkpoint = torch.load(weight_file)
+        self.model.load_state_dict(checkpoint['state_dict'])
 
-    #     paths = []
-    #     scores = []
-    #     truths = []
-    #     with torch.set_grad_enabled(False):
-    #         self.model.eval()
-    #         total_acc = 0
-    #         total = 0
+        paths = []
+        ground_truths = []
+        predicts = []
+        with torch.set_grad_enabled(False):
+            self.model.eval()
+            total_acc = 0
+            total = 0
 
-    #         pbar = tqdm(enumerate(test_data),
-    #                     total=len(test_data),
-    #                     bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
-    #         pbar.set_description('Testing model')
+            pbar = tqdm(enumerate(test_data),
+                        total=len(test_data),
+                        bar_format='{l_bar}{bar:10}{r_bar}{bar:-10b}')
+            pbar.set_description('Testing model')
 
-    #         for step, (path, images, targets) in pbar:
-    #             images, targets = images.to(self.device), targets.to(self.device)
-    #             outputs = self.model(images)
+            for step, (path, images, targets) in pbar:
+                images, targets = images.to(self.device), targets.to(self.device)
+                outputs = self.model(images)
 
-    #             _, predict = torch.max(outputs.data, 1)
-    #             total_acc = total_acc + (predict == targets).sum().item()
-    #             total = total + images.size(0)
+                _, predict = torch.max(outputs.data, 1)
+                total_acc = total_acc + (predict == targets).sum().item()
+                total = total + images.size(0)
 
-    #             # Save to csv
-    #             paths.append(path)
-    #             scores.append(predict.data.cpu().numpy())
-    #             truths.append(targets.data.cpu().numpy())
-    #             if step % 200:
-    #                 pbar.set_postfix(acc=f'{total_acc/total:.4f}')
+                # Save to csv
+                paths.append(path)
+                predicts.append(predict.data.cpu().numpy())
+                ground_truths.append(targets.data.cpu().numpy())
+                if step % 200:
+                    pbar.set_postfix(acc=f'{total_acc/total:.4f}')
 
-    #         ave_acc = total_acc / total
-    #         pbar.set_postfix(acc=f'{ave_acc:.4f}')
+            ave_acc = total_acc / total
+            pbar.set_postfix(acc=f'{ave_acc:.4f}')
 
-    #     paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
-    #     scores = np.array([subscore for s in scores for subscore in s])
-    #     truths = np.array([subtruth for truth in truths for subtruth in truth])
-    #     df['file_name'] = paths
-    #     df['liveness_score'] = scores
-    #     df['label'] = truths
+        paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
+        predicts = np.array([subpredict for s in predicts for subpredict in s])
+        ground_truths = np.array([subtruth for truth in ground_truths for subtruth in truth])
+        df['fnam'] = paths
+        df['ground_truth'] = ground_truths
+        df['predict'] = predicts
 
-    #     df.to_csv(file_csv, index=False)
-    #     print(f'Saved results in {file_csv}')
+        df.to_csv(file_csv, index=False)
+        print(f'Saved results in {file_csv}')
 
     def test_video(self, file_csv, weight_file):
         video_path, video_files, transform = self.data.test_video_loader()
