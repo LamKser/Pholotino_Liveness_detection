@@ -5,24 +5,24 @@ import os
 
 parser = ArgumentParser(description='Run VGG19')
 
-parser.add_argument('--validation', default=False, type=bool,
-                    help='Validate model (default: "False")')
-parser.add_argument('--name', default='vgg19', type=str,
-                    help='Model name (default: "vgg19")')
+parser.add_argument('--validation', default=True, type=bool,
+                    help='Validate model (default: "True")')
+parser.add_argument('--name', default='renet18', type=str,
+                    help='Model name (default: "renet18")')
 parser.add_argument('--train-path', default='train', type=str,
                     help='Training data path (default: "train")')
 parser.add_argument('--val-path', default='val', type=str,
                     help='Validation data path (default: "val")')
-# parser.add_argument('--test-path', default='test', type=str,
-                    # help='Test data path (default: "test")')
+parser.add_argument('--test-path', default='test', type=str,
+                    help='Test data path (default: "test")')
 parser.add_argument('--test-video-path', default='videos', type=str,
                     help='Test video data path (default: "videos")')
 parser.add_argument('--save-path', default='weight', type=str,
                     help='Save weight path (default: "weight")')
-parser.add_argument('--weight-file', default='model.pt', type=str,
-                    help='Weight file (default: "model.pt")')
-parser.add_argument('--csv-file', default='Result.csv', type=str,
-                    help='Save score to csv (default: "Result.csv")')
+parser.add_argument('--weight-file', default='resnet18.pt', type=str,
+                    help='Weight file (default: "resnet18.pt")')
+parser.add_argument('--csv-file', default='Predict.csv', type=str,
+                    help='Save score to csv (default: "Predict.csv")')
 parser.add_argument('--csv-predict', default='Predict.csv', type=str,
                     help='Save predict score to csv (default: "Predict.csv")')
 parser.add_argument('--num-class', default=2, type=int,
