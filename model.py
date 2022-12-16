@@ -245,7 +245,7 @@ class RunModel():
         paths = np.array([subpath.split('\\')[-1] for p in paths for subpath in p])
         predicts = np.array([subpredict for s in predicts for subpredict in s])
         ground_truths = np.array([subtruth for truth in ground_truths for subtruth in truth])
-        df['fnam'] = paths
+        df['fname'] = paths
         df['ground_truth'] = ground_truths
         df['predict'] = predicts
 
